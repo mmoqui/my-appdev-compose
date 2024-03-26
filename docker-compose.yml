@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  my-view-project:
+    image: my-view-dev:latest
+    container_name: my-view-project
+    stdin_open: true
+    tty: true
+    privileged: true
+    command: /bin/bash
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${HOME}/.ssh:/home/myuser/.ssh
+      - ${HOME}/.gnupg:/home/myuser/.gnupg
+      - my-view-dist:/home/myuser/my-app-view/dist
+    networks:
+      my-network:
+        ipv4_address: 172.20.0.2
+  
+  my-app:
+    image: my-app-node:latest
+    container_name: my-app-server
+    environment:
+      - USER=${DB_USER}
+      - PASSWORD=${DB_PASSWORD}
+      - DATABASE=${DB_NAME}
+    depends_on:
+      - my-database
+    links:
+      - my-database:database
+    ports:
+      - 3000:80
+    networks:
+      my-network:
+        ipv4_address: 172.20.0.10
+
+  my-database:
+    image: postgres:latest
+    container_name: my-database
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - my-database-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      my-network:
+        ipv4_address: 172.20.0.11
+
+  my-app-front:
+    image: my-apache:latest
+    container_name: my-app-front
+    hostname: my-app-front.silverpeas.io
+    depends_on:
+      - my-app
+    links:
+      - my-app
+    ports:
+      - 8080:80
+    volumes:
+      - my-view-dist:/home/myuser
+    networks:
+      my-network:
+        ipv4_address: 172.20.0.12
+
+volumes:
+  my-view-dist:
+    name: my-view-dist
+  my-database-data:
+    name: my-database-data
+
+networks:
+  my-network:
+    name: my-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
