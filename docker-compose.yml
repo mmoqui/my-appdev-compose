@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   my-view-project:
-    image: my-view-dev:latest
+    image: my-dev-env:latest
     container_name: my-view-project
     stdin_open: true
     tty: true
